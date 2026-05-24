@@ -77,9 +77,9 @@ namespace WebBanSach.Areas.Customer.Controllers
             return View(ShoppingCartVM);
         }
 
-        [ActionName("Summary")]
+        [ActionName("CompanySummary")]
         [HttpPost]
-        public IActionResult SummaryPOST()
+        public IActionResult CompanySummaryPOST()
         {
             var claimsIdentity = (ClaimsIdentity)User.Identity;//lấy thông tin người dùng đang đăng nhập
             var claim = claimsIdentity.FindFirst(ClaimTypes.NameIdentifier);//lấy id của người dùng đang đăng nhập
@@ -173,6 +173,80 @@ namespace WebBanSach.Areas.Customer.Controllers
             }
 
             
+        }
+
+        [ActionName("Summary")]
+        [HttpPost]
+        public IActionResult SummaryPOST()
+        {
+            var claimsIdentity = (ClaimsIdentity)User.Identity;//lấy thông tin người dùng đang đăng nhập
+            var claim = claimsIdentity.FindFirst(ClaimTypes.NameIdentifier);//lấy id của người dùng đang đăng nhập
+
+            ShoppingCartVM.ListCart = _unitOfWork.ShoppingCart.GetAll(u => u.ApplicationUserId == claim.Value,
+                includeProperties: "Product");//lấy tất cả sản phẩm trong giỏ hàng của người dùng đang đăng nhập
+            ShoppingCartVM.OrderHeader.PaymentStatus = SD.PaymentStatusPending;
+            ShoppingCartVM.OrderHeader.OrderStatus = SD.StatusPending;
+            ShoppingCartVM.OrderHeader.OrderDate = DateTime.Now;
+            ShoppingCartVM.OrderHeader.ApplicationUserId = claim.Value;
+
+
+
+            foreach (var cart in ShoppingCartVM.ListCart)
+            {
+                cart.Price = GetPriceBaseOnQuantity(cart.Count, cart.Product.ListPrice,
+                    cart.Product.Price50, cart.Product.Price100);
+                ShoppingCartVM.OrderHeader.OrderTotal += (cart.Price * cart.Count);//tính tổng tiền của giỏ hàng bằng cách nhân giá của sản phẩm với số lượng sản phẩm trong giỏ hàng và cộng dồn vào thuộc tính OrderTotal
+
+            }
+
+            _unitOfWork.OrderHeader.Add(ShoppingCartVM.OrderHeader);
+            _unitOfWork.Save();
+
+            foreach (var cart in ShoppingCartVM.ListCart)
+            {
+                OrderDetail orderDetail = new()
+                {
+                    ProductId = cart.ProductId,
+                    OrderId = ShoppingCartVM.OrderHeader.Id,
+                    Price = cart.Price,
+                    Count = cart.Count
+                };
+
+                _unitOfWork.OrderDetail.Add(orderDetail);
+                _unitOfWork.Save();
+            }
+            _unitOfWork.ShoppingCart.removeRange(ShoppingCartVM.ListCart);//xóa tất cả sản phẩm trong giỏ hàng của người dùng đang đăng nhập sau khi đã tạo đơn hàng
+            _unitOfWork.Save();
+
+            // 1. Đọc các thông tin cấu hình từ appsettings.json
+            string vnp_Returnurl = _configuration["Vnpay:ReturnUrl"];
+            string vnp_Url = _configuration["Vnpay:BaseUrl"];
+            string vnp_TmnCode = _configuration["Vnpay:TmnCode"];
+            string vnp_HashSecret = _configuration["Vnpay:HashSecret"];
+
+            // 2. Khởi tạo lớp tiện ích VnPayLibrary
+            VnPayLibrary vnpay = new VnPayLibrary();
+
+            // 3. Nạp các tham số bắt buộc để gửi sang VNPAY
+            vnpay.AddRequestData("vnp_Version", "2.1.0");
+            vnpay.AddRequestData("vnp_Command", "pay");
+            vnpay.AddRequestData("vnp_TmnCode", vnp_TmnCode);
+            // VNPAY yêu cầu số tiền phải nhân lên 100 lần (ví dụ: 10,000 VND thì gửi là 1000000)
+            vnpay.AddRequestData("vnp_Amount", (ShoppingCartVM.OrderHeader.OrderTotal * 100).ToString());
+            vnpay.AddRequestData("vnp_CreateDate", DateTime.Now.ToString("yyyyMMddHHmmss"));
+            vnpay.AddRequestData("vnp_CurrCode", "VND");
+            vnpay.AddRequestData("vnp_IpAddr", HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1");
+            vnpay.AddRequestData("vnp_Locale", "vn");
+            vnpay.AddRequestData("vnp_OrderInfo", "Thanh toan don hang:" + ShoppingCartVM.OrderHeader.Id);
+            vnpay.AddRequestData("vnp_OrderType", "other"); // Loại hàng hóa
+            vnpay.AddRequestData("vnp_ReturnUrl", vnp_Returnurl);
+            vnpay.AddRequestData("vnp_TxnRef", ShoppingCartVM.OrderHeader.Id.ToString()); // Mã tham chiếu (mã đơn hàng của bạn)
+
+            // 4. Tạo đường dẫn thanh toán hoàn chỉnh
+            string paymentUrl = vnpay.CreateRequestUrl(vnp_Url, vnp_HashSecret);
+
+            // 5. Chuyển hướng người dùng
+            return Redirect(paymentUrl);
         }
 
         [HttpGet]

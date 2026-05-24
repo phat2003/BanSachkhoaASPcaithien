@@ -150,12 +150,14 @@ namespace WebBanSach.Areas.Identity.Pages.Account
                 //        Value = i
                 //    }),
 
-                RoleList = _roleManager.Roles.Where(u => !adminExists || u.Name != SD.Role_User_Admin).Select(x => x.Name).Select(
-                    i => new SelectListItem
-                    {
-                        Text = i,
-                        Value = i
-                    }),
+                // Logic lọc trong Register.cshtml.cs
+                RoleList = _roleManager.Roles
+                .Where(u => u.Name != SD.Role_User_Employee && (!adminExists || u.Name != SD.Role_User_Admin))
+                .Select(i => new SelectListItem
+                {
+                    Text = i.Name,
+                    Value = i.Name
+                }),
 
                 CompanyList = _unitOfWork.Company.GetAll().Select(i => new SelectListItem
                 {
