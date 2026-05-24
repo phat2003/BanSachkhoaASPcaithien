@@ -1,0 +1,132 @@
+﻿@model BanSach.Models.ViewModel.ProductVM
+
+<form method="post" asp-action="Upsert" enctype="multipart/form-data">
+    <div asp-validation-summary="All" class="text-danger"></div>
+    <input type="hidden" asp-for="product.Id" />
+    <input type="hidden" asp-for="product.ImageUrl" />
+    <div class="border p-3 mt-4">
+        <div class="row pb-2">
+            <h2>@(Model.product.Id == 0 ? "Create" : "Edit")  Product</h2>
+            <hr />
+        </div>
+        <div class="mb-3 col-6">
+            <label asp-for="product.Title"></label>
+            <input asp-for="product.Title" class="form-control" />
+            <span asp-validation-for="product.Title" class="text-danger"></span>
+        </div>
+        <div class="mb-3 col-6">
+            <label asp-for="product.Description"></label>
+            <textarea asp-for="product.Description" class="form-control" rows="3"></textarea>
+            <span asp-validation-for="product.Description" class="text-danger"></span>
+        </div>
+        <div class="row">
+            <div class="mb-3 col-6">
+                <label asp-for="product.ISBN"></label>
+                <input asp-for="product.ISBN" class="form-control" />
+                <span asp-validation-for="product.ISBN" class="text-danger"></span>
+            </div>
+            <div class="mb-3 col-6">
+                <label asp-for="product.Author"></label>
+                <input asp-for="product.Author" class="form-control" />
+                <span asp-validation-for="product.Author" class="text-danger"></span>
+            </div>
+        </div>
+        <div class="row">
+            <div class="mb-3 col-6">
+                <label asp-for="product.ListPrice"></label>
+                <input asp-for="product.ListPrice" class="form-control" />
+                <span asp-validation-for="product.ListPrice" class="text-danger"></span>
+            </div>
+            <div class="mb-3 col-6">
+                <label asp-for="product.Price50"></label>
+                <input asp-for="product.Price50" class="form-control" />
+                <span asp-validation-for="product.Price50" class="text-danger"></span>
+            </div>
+            <div class="mb-3 col-6">
+                <label asp-for="product.Price100"></label>
+                <input asp-for="product.Price100" class="form-control" />
+                <span asp-validation-for="product.Price100" class="text-danger"></span>
+            </div>
+        </div>
+        
+        
+        <div class="mb-3 col-6">
+            <label asp-for="product.ImageUrl"></label>
+            <input type="file" id="imageUrl" name="file" class="form-control" />
+            <span asp-validation-for="product.ImageUrl" class="text-danger"></span>
+        </div>
+        <div class="mb-3 col-6">
+            <label asp-for="product.CategoryId"></label>
+            <select asp-for="product.CategoryId" asp-items="Model.CategoryList" class="form-select">
+                <option disabled onselect=""> -- Select Category --</option>
+            </select>
+            <span asp-validation-for="product.CategoryId" class="text-danger"></span>
+        </div>
+        <div class="mb-3 col-6">
+            <label asp-for="product.CoverTypeId"></label>
+            <select asp-for="product.CoverTypeId" asp-items="Model.CoverTypeList" class="form-select">
+                <option disabled onselect=""> -- Select Category --</option>
+            </select>
+            <span asp-validation-for="product.CoverTypeId" class="text-danger"></span>
+        </div>
+        @if (Model.product.Id==0)
+        {
+            <button type="submit" onclick="return ValidateInput()" class="btn btn-primary">Create</button>
+            //hàm onclick để kiểm tra nếu không có ảnh sẽ hiện thông báo và nó được tinh chỉnh ở đoạn script bên dưới
+        }
+        else
+        {
+            <button type="submit" class="btn btn-primary">Update</button>
+        }
+
+        <a asp-controller="CoverType" asp-action="Index" class="btn btn-primary">Back To List</a>
+    </div>
+    <div class="row">
+        <div class="col-10">
+            <img src="/@Model.product.ImageUrl" width="50" />
+        </div>
+    </div>
+</form>
+@section Scripts
+{
+    @* <partial name="_ValidationScriptsPartial" /> *@
+
+    <script>
+        function ValidateInput()//script này để valid xem trường upload ảnh đã được upload hay chưa? nếu chưa thì báo lỗi
+        {
+            if (document.getElementById("imageUrl").value == "") {
+                Swal.fire({
+                    icon: "error",
+                    title: "Oops...",
+                    text: "Something went wrong!",
+                    footer: '<a href="#">Please upload images</a>'
+                })
+                return false;
+
+            }
+            return true;
+        }
+    </script>
+    @* <script>
+        tinymce.init({
+            selector: 'textarea',
+            plugins: [
+                // Core editing features
+                'anchor', 'autolink', 'charmap', 'codesample', 'emoticons', 'link', 'lists', 'media', 'searchreplace', 'table', 'visualblocks', 'wordcount',
+                // Your account includes a free trial of TinyMCE premium features
+                // Try the most popular premium features until Jan 12, 2026:
+                'checklist', 'mediaembed', 'casechange', 'formatpainter', 'pageembed', 'a11ychecker', 'tinymcespellchecker', 'permanentpen', 'powerpaste', 'advtable', 'advcode', 'advtemplate', 'ai', 'uploadcare', 'mentions', 'tinycomments', 'tableofcontents', 'footnotes', 'mergetags', 'autocorrect', 'typography', 'inlinecss', 'markdown', 'importword', 'exportword', 'exportpdf'
+            ],
+            toolbar: 'undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | link media table mergetags | addcomment showcomments | spellcheckdialog a11ycheck typography uploadcare | align lineheight | checklist numlist bullist indent outdent | emoticons charmap | removeformat',
+            tinycomments_mode: 'embedded',
+            tinycomments_author: 'Author name',
+            mergetags_list: [
+                { value: 'First.Name', title: 'First Name' },
+                { value: 'Email', title: 'Email' },
+            ],
+            ai_request: (request, respondWith) => respondWith.string(() => Promise.reject('See docs to implement AI Assistant')),
+            uploadcare_public_key: '381d88eda90af5d14567',
+        });
+    </script> *@
+
+}
