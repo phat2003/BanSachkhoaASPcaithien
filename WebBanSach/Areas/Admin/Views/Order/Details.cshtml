@@ -1,0 +1,70 @@
+﻿@model BanSach.Models.ViewModel.OrderVM
+
+<div class="row">
+    <div class="col-12 col-lg-6 pb-4">
+        <h4 class="text-primary">Thông tin vận chuyển 🚚</h4>
+        <div class="row my-1">
+            <div class="col-3">Họ tên</div>
+            <div class="col-9">
+                <input asp-for="OrderHeader.Name" type="text" class="form-control" />
+            </div>
+        </div>
+        <div class="row my-1">
+            <div class="col-3">Số điện thoại</div>
+            <div class="col-9">
+                <input asp-for="OrderHeader.PhoneNumber" type="text" class="form-control" />
+            </div>
+        </div>
+        @* Các thông tin khác như Địa chỉ, Thành phố... *@
+    </div>
+    <h4 class="text-primary">Sách đã mua 📚</h4>
+    <ul class="list-group mb-3">
+        @foreach (var detail in Model.OrderDetail)
+        {
+            <li class="list-group-item d-flex justify-content-between p-2">
+                <div class="row container">
+                    <div class="col-8">
+                        @* Truy cập tên sách qua liên kết Product *@
+                        <h6 class="my-0 text-primary">@detail.Product.Title</h6>
+                        <small class="text-muted">Giá: @detail.Price.ToString("c")</small><br />
+                        <small class="text-muted">Số lượng: @detail.Count</small>
+                    </div>
+                    <div class="col-4 text-end">
+                        @* Tính tổng tiền cho từng đầu sách *@
+                        <p class="text-success">@((detail.Count * detail.Price).ToString("c"))</p>
+                    </div>
+                </div>
+            </li>
+        }
+    </ul>
+    <form method="post">
+        @* Trường ẩn này rất quan trọng để gửi Id về Controller *@
+        <input asp-for="OrderHeader.Id" hidden />
+
+        <div class="container border p-3">
+            <div class="row pt-3 border-top">
+                <div class="col-12 col-md-4 offset-md-8">
+                    @* Dùng điều kiện if để chỉ hiện nút tương ứng với trạng thái hiện tại *@
+                    @if (Model.OrderHeader.OrderStatus == "Approved")
+                    {
+                        <button type="submit" asp-action="StartProcessing" class="btn btn-primary form-control my-1">
+                            Xử lý đơn hàng
+                        </button>
+                    }
+                    @if (Model.OrderHeader.OrderStatus == "Processing")
+                    {
+                        <button type="submit" asp-action="ShipOrder" class="btn btn-success form-control my-1">
+                            Giao hàng
+                        </button>
+                    }
+                    @if (Model.OrderHeader.OrderStatus != "Cancelled" && Model.OrderHeader.OrderStatus != "Shipped")
+                    {
+                        <button type="submit" asp-action="CancelOrder" class="btn btn-danger form-control my-1">
+                            Hủy đơn hàng
+                        </button>
+                    }
+                </div>
+            </div>
+        </div>
+    </form>
+</div>

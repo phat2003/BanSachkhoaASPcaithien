@@ -21,9 +21,20 @@ namespace WebBanSach.Areas.Customer.Controllers
             _unitOfWork = unitOfWork;
         }
 
-        public IActionResult Index()
+        public IActionResult Index(string? searchQuery)
         {
+            // 1. Lấy tất cả sản phẩm từ cơ sở dữ liệu
             IEnumerable<Product> objProductList = _unitOfWork.Product.GetAll(includeProperties: "Category,CoverType");
+
+            // 2. Kiểm tra xem người dùng có nhập từ khóa tìm kiếm vào không
+            if (!string.IsNullOrEmpty(searchQuery))
+            {
+                // 3. Nếu có, chúng ta dùng .Where() và .Contains() để lọc lại danh sách.
+                // Chỉ giữ lại những sách mà Tiêu đề (Title) có chứa từ khóa đó.
+                objProductList = objProductList.Where(u => u.Title.Contains(searchQuery));
+            }
+
+            // 4. Trả danh sách sản phẩm (đã lọc hoặc chưa lọc) về cho trang View
             return View(objProductList);
         }
 
