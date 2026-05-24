@@ -1,6 +1,4 @@
 ﻿@page
-@using BanSach.Utility
-@inject SignInManager<IdentityUser> SignInManager
 @model IndexModel
 @{
     ViewData["Title"] = "Profile";
@@ -22,17 +20,6 @@
                 <label asp-for="Input.PhoneNumber" class="form-label"></label>
                 <span asp-validation-for="Input.PhoneNumber" class="text-danger"></span>
             </div>
-            @if (SignInManager.IsSignedIn(User))
-            {
-                @if (User.Identity.IsAuthenticated && User.IsInRole(SD.Role_User_Comp))
-                {
-                    <div class="form-floating mb-3">
-                        <select asp-for="Input.CompanyId"  asp-items="@Model.Input.CompanyList" class="form-select">
-                            <option disabled selected>-Select Company</option>
-                        </select>
-                    </div>
-                }
-            }
             <button id="update-profile-button" type="submit" class="w-100 btn btn-lg btn-primary">Save</button>
         </form>
     </div>

@@ -1,7 +1,4 @@
-﻿@using BanSach.Utility
-@using Microsoft.AspNetCore.Identity
-@inject SignInManager<IdentityUser> SignInManager
-@model BanSach.Models.ViewModel.ShoppingCartVM
+﻿@model BanSach.Models.ViewModel.ShoppingCartVM
 <form method="post">
     <br />
     <div class="container">
@@ -115,14 +112,7 @@
                         </p>
                     </div>
                     <div class="col-12 col-md-4">
-                        <button asp-action="Summary" type="submit" value="Place Order" class="btn btn-primary form-control">Place Order</button>
-                        @if (SignInManager.IsSignedIn(User))
-                        {
-                            @if (User.Identity.IsAuthenticated && User.IsInRole(SD.Role_User_Comp))
-                            {
-                                <button asp-action="CompanySummary" type="submit" value="Place Order" class="btn btn-primary form-control d-block w-100 mt-2">Delayed payment</button>
-                            }
-                        }
+                        <button type="submit" value="Place Order" class="btn btn-primary form-control">Place Order</button>
                     </div>
                 </div>
             </div>

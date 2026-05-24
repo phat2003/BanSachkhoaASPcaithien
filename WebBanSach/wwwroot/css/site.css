@@ -1,4 +1,4 @@
-﻿html {
+html {
   font-size: 14px;
 }
 
@@ -21,11 +21,11 @@ body {
   margin-bottom: 60px;
 }
 
-/*dòng footer này để fix cái footer cho nó nằm cuối*/
-footer {
+/*d�ng footer n�y ?? ?� t?m ?? fix c�i footer*/
+/*footer {
     position: fixed;
     bottom: 0;
     left: 0;
     width: 100%;
     z-index: 1030;
-}
+}*/
