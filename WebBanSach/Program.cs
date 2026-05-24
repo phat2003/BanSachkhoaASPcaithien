@@ -16,7 +16,10 @@ builder.Services.AddDbContext<ApplicationDbContext>(//Đăng ký ApplicationDbCo
         builder.Configuration.GetConnectionString("DefaultConnection")
         ));
 
-builder.Services.AddIdentity<IdentityUser,IdentityRole>().AddDefaultTokenProviders().AddEntityFrameworkStores<ApplicationDbContext>();
+builder.Services.AddIdentity<IdentityUser,IdentityRole>(options =>
+{
+    options.SignIn.RequireConfirmedAccount = true; // Bắt buộc người dùng phải xác thực account
+}).AddDefaultTokenProviders().AddEntityFrameworkStores<ApplicationDbContext>();
 
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();//Đăng ký dịch vụ IUnitOfWork với triển khai UnitOfWork trong DI container với thời gian sống là Scoped.
 builder.Services.AddScoped<IEmailSender, EmailSender>();//Đăng ký dịch vụ IUnitOfWork với triển khai UnitOfWork trong DI container với thời gian sống là Scoped.
