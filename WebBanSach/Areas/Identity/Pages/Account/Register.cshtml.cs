@@ -136,14 +136,27 @@ namespace WebBanSach.Areas.Identity.Pages.Account
             
             ReturnUrl = returnUrl;
             ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
+
+            // 1. Kiểm tra xem đã có Admin nào chưa
+            var admins = await _userManager.GetUsersInRoleAsync(SD.Role_User_Admin);
+            bool adminExists = admins.Any();
+
             Input = new InputModel()
             {
-                RoleList = _roleManager.Roles.Select(x => x.Name).Select(
+                //RoleList = _roleManager.Roles.Select(x => x.Name).Select(
+                //    i => new SelectListItem
+                //    {
+                //        Text = i,
+                //        Value = i
+                //    }),
+
+                RoleList = _roleManager.Roles.Where(u => !adminExists || u.Name != SD.Role_User_Admin).Select(x => x.Name).Select(
                     i => new SelectListItem
                     {
                         Text = i,
                         Value = i
                     }),
+
                 CompanyList = _unitOfWork.Company.GetAll().Select(i => new SelectListItem
                 {
                     Text = i.Name,

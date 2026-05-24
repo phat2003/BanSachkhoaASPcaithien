@@ -6,9 +6,12 @@ using System;
 using System.ComponentModel.DataAnnotations;
 using System.Text.Encodings.Web;
 using System.Threading.Tasks;
+using BanSach.DataAccess.Repository.IRepository;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace WebBanSach.Areas.Identity.Pages.Account.Manage
 {
@@ -16,13 +19,16 @@ namespace WebBanSach.Areas.Identity.Pages.Account.Manage
     {
         private readonly UserManager<IdentityUser> _userManager;
         private readonly SignInManager<IdentityUser> _signInManager;
+        private readonly IUnitOfWork _unitOfWork;
 
         public IndexModel(
             UserManager<IdentityUser> userManager,
-            SignInManager<IdentityUser> signInManager)
+            SignInManager<IdentityUser> signInManager,
+            IUnitOfWork unitOfWork)
         {
             _userManager = userManager;
             _signInManager = signInManager;
+            _unitOfWork = unitOfWork;
         }
 
         /// <summary>
@@ -58,6 +64,10 @@ namespace WebBanSach.Areas.Identity.Pages.Account.Manage
             [Phone]
             [Display(Name = "Phone number")]
             public string PhoneNumber { get; set; }
+            public int CompanyId { get; set; }
+            
+            [ValidateNever]
+            public IEnumerable<SelectListItem> CompanyList { get; set; }
         }
 
         private async Task LoadAsync(IdentityUser user)
@@ -69,7 +79,12 @@ namespace WebBanSach.Areas.Identity.Pages.Account.Manage
 
             Input = new InputModel
             {
-                PhoneNumber = phoneNumber
+                PhoneNumber = phoneNumber,
+                CompanyList = _unitOfWork.Company.GetAll().Select(i => new SelectListItem
+                {
+                    Text = i.Name,
+                    Value = i.Id.ToString()
+                })
             };
         }
 
@@ -98,6 +113,15 @@ namespace WebBanSach.Areas.Identity.Pages.Account.Manage
                 await LoadAsync(user);
                 return Page();
             }
+
+            var companyId = _unitOfWork.ApplicationUser.GetFirstOrDefault(u => u.Id == user.Id).CompanyId ?? 0;
+            if (Input.CompanyId != 0 && Input.CompanyId != companyId)
+                {
+                    var appUser = _unitOfWork.ApplicationUser.GetFirstOrDefault(u => u.Id == user.Id);
+                    appUser.CompanyId = Input.CompanyId;
+                    _unitOfWork.ApplicationUser.Update(appUser);
+                    _unitOfWork.Save();
+                }
 
             var phoneNumber = await _userManager.GetPhoneNumberAsync(user);
             if (Input.PhoneNumber != phoneNumber)

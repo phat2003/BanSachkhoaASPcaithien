@@ -131,6 +131,8 @@ namespace WebBanSach.Areas.Customer.Controllers
                 ShoppingCartVM.OrderHeader.PaymentStatus = SD.PaymentStatusPending;
                 ShoppingCartVM.OrderHeader.OrderStatus = SD.StatusPending;
 
+                _unitOfWork.Save();
+
                 // 1. Đọc các thông tin cấu hình từ appsettings.json
                 string vnp_Returnurl = _configuration["Vnpay:ReturnUrl"];
                 string vnp_Url = _configuration["Vnpay:BaseUrl"];
@@ -166,7 +168,7 @@ namespace WebBanSach.Areas.Customer.Controllers
                 // Khách hàng doanh nghiệp (Company): Đơn hàng được duyệt ngay, thanh toán trả sau
                 ShoppingCartVM.OrderHeader.PaymentStatus = SD.PaymentStatusDelayedPayment;
                 ShoppingCartVM.OrderHeader.OrderStatus = SD.StatusApproved;
-
+                _unitOfWork.Save();
                 return RedirectToAction("Index", "Home");
             }
 

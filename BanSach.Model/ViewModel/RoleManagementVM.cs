@@ -12,6 +12,8 @@ namespace BanSach.Models.ViewModel
     {
         public IdentityUser User { get; set; }
         public string OldRole { get; set; }
+        public ApplicationUser ApplicationUser { get; set; }
         public IEnumerable<SelectListItem> RoleList { get; set; }
+        public IEnumerable<SelectListItem> CompanyList { get; set; }
     }
 }

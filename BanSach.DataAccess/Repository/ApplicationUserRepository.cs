@@ -18,8 +18,12 @@ namespace BanSach.DataAccess.Repository
         {
             _db = db;// gán giá trị cho biến _db.
         }
-        
 
-        
+        public void Update(ApplicationUser applicationUser)
+        {
+            // Sử dụng _db.ApplicationUsers thay vì _db.Companys
+            _db.ApplicationUsers.Update(applicationUser);
+        }
+
     }
 }

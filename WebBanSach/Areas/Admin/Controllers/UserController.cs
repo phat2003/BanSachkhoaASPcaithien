@@ -1,4 +1,7 @@
-﻿using BanSach.Models.ViewModel;
+﻿using BanSach.DataAccess.Repository.IRepository;
+using BanSach.Models;
+using BanSach.Models.ViewModel;
+using BanSach.Utility;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -12,11 +15,13 @@ namespace WebBanSach.Areas.Admin.Controllers
     {
         private readonly UserManager<IdentityUser> _userManager;
         private readonly RoleManager<IdentityRole> _roleManager;
+        private readonly IUnitOfWork _unitOfWork;
 
-        public UserController(UserManager<IdentityUser> userManager, RoleManager<IdentityRole> roleManager)
+        public UserController(UserManager<IdentityUser> userManager, RoleManager<IdentityRole> roleManager, IUnitOfWork unitOfWork)
         {
             _userManager = userManager;
             _roleManager = roleManager;
+            _unitOfWork = unitOfWork;
         }
 
         public async Task<IActionResult> Index()
@@ -48,61 +53,89 @@ namespace WebBanSach.Areas.Admin.Controllers
         [HttpGet]
         public async Task<IActionResult> EditRole(string userId)
         {
-            // 1. Tìm người dùng
-            var user = await _userManager.FindByIdAsync(userId);
-            if (user == null)
-            {
-                return NotFound();
-            }
+            // Lấy thông tin user hiện tại
+            var user = _unitOfWork.ApplicationUser.GetFirstOrDefault(u => u.Id == userId);
 
-            // 2. Lấy Role hiện tại (Giả sử dự án của bạn mỗi người chỉ có 1 Role tại một thời điểm)
-            var oldRoles = await _userManager.GetRolesAsync(user);
-            var oldRole = oldRoles.FirstOrDefault();
+            // 1. Kiểm tra sự tồn tại của Admin
+            var admins = await _userManager.GetUsersInRoleAsync(SD.Role_User_Admin);
+            bool adminExists = admins.Any();
 
-            // 3. Lấy tất cả Roles trong hệ thống và chuyển đổi thành dạng danh sách thả xuống (SelectListItem)
-            var roles = _roleManager.Roles.ToList();
-            var roleList = roles.Select(x => new SelectListItem
-            {
-                Text = x.Name, // Chữ hiển thị cho Admin thấy (VD: "Staff")
-                Value = x.Name // Giá trị thực sự gửi về Server
-            });
+            // 2. Lọc danh sách Role
+            //var roleList = _roleManager.Roles
+            //    .Where(u => !adminExists || u.Name != SD.Role_User_Admin)
+            //    .Select(x => new SelectListItem
+            //    {
+            //        Text = x.Name,
+            //        Value = x.Name
+            //    });
 
-            // 4. Đóng gói tất cả vào ViewModel
-            var roleVM = new RoleManagementVM
+            // Nạp dữ liệu vào ViewModel
+            RoleManagementVM roleVM = new RoleManagementVM()
             {
-                User = user,
-                OldRole = oldRole,
-                RoleList = roleList
+                ApplicationUser = user,
+                RoleList = _roleManager.Roles.Where(u => !adminExists || u.Name != SD.Role_User_Admin).Select(i => new SelectListItem
+                {
+                    Text = i.Name,
+                    Value = i.Name
+                }),
+                CompanyList = _unitOfWork.Company.GetAll().Select(i => new SelectListItem
+                {
+                    Text = i.Name,
+                    Value = i.Id.ToString()
+                }),
             };
 
-            // 5. Gửi ra View
+            
+
+            // Lấy Role hiện tại của User (bạn có thể đang dùng cách truy vấn trực tiếp vào Db)
+            roleVM.ApplicationUser.Role = _userManager.GetRolesAsync(user).GetAwaiter().GetResult().FirstOrDefault();
+
             return View(roleVM);
         }
 
         [HttpPost]
-        public async Task<IActionResult> EditRole(string userId, string newRole)
+        public IActionResult EditRole(RoleManagementVM roleVM)
         {
-            // Kiểm tra xem dữ liệu gửi lên có bị trống không
-            if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(newRole))
+            // Lấy thông tin user cũ từ database
+            var applicationUser = _unitOfWork.ApplicationUser.GetFirstOrDefault(u => u.Id == roleVM.ApplicationUser.Id);
+            var oldRole = _userManager.GetRolesAsync(applicationUser).GetAwaiter().GetResult().FirstOrDefault();
+
+
+
+            // Nếu có sự thay đổi về Role
+            if (!(roleVM.ApplicationUser.Role == oldRole))
             {
-                return RedirectToAction("Index");
+                if (roleVM.ApplicationUser.Role == "Company") // (Bạn có thể dùng SD.Role_User_Comp nếu có file SD)
+                {
+                    // Nếu phân quyền mới là Company, lưu lại CompanyId từ thẻ select
+                    applicationUser.CompanyId = roleVM.ApplicationUser.CompanyId;
+                }
+                if (oldRole == "Company")
+                {
+                    // Nếu role cũ là Company mà chuyển sang role khác, hủy bỏ CompanyId
+                    applicationUser.CompanyId = null;
+                }
+
+                // Cập nhật Database
+                _unitOfWork.ApplicationUser.Update(applicationUser);
+                _unitOfWork.Save();
+
+                // Xóa Role cũ, thêm Role mới cho Identity
+                _userManager.RemoveFromRoleAsync(applicationUser, oldRole).GetAwaiter().GetResult();
+                _userManager.AddToRoleAsync(applicationUser, roleVM.ApplicationUser.Role).GetAwaiter().GetResult();
+            }
+            else
+            {
+                // Nếu Role không đổi, nhưng họ đổi Công ty khác
+                if (oldRole == "Company" && applicationUser.CompanyId != roleVM.ApplicationUser.CompanyId)
+                {
+                    applicationUser.CompanyId = roleVM.ApplicationUser.CompanyId;
+                    _unitOfWork.ApplicationUser.Update(applicationUser);
+                    _unitOfWork.Save();
+                }
             }
 
-            // 1. Tìm người dùng trong cơ sở dữ liệu
-            var user = await _userManager.FindByIdAsync(userId);
-            if (user == null)
-            {
-                return NotFound();
-            }
-
-            // 2. Lấy danh sách các Vai trò (Role) cũ của người dùng này và xóa chúng đi
-            var oldRoles = await _userManager.GetRolesAsync(user);
-            await _userManager.RemoveFromRolesAsync(user, oldRoles);
-
-            // 3. Cấp Vai trò mới mà Admin vừa chọn
-            await _userManager.AddToRoleAsync(user, newRole);
-
-            // 4. Quay trở về trang danh sách
+            TempData["success"] = "Cập nhật quyền thành công!";
             return RedirectToAction("Index");
         }
 
